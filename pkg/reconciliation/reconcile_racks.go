@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -2416,7 +2417,7 @@ func (rc *ReconciliationContext) cleanupAfterScaling() result.ReconcileResult {
 		}
 
 		// Create the cleanup task
-		if err := rc.createTask(taskapi.CommandCleanup); err != nil {
+		if err := rc.createCleanupTask(); err != nil {
 			return result.Error(err)
 		}
 
@@ -2428,9 +2429,14 @@ func (rc *ReconciliationContext) cleanupAfterScaling() result.ReconcileResult {
 	return result.Continue()
 }
 
-func (rc *ReconciliationContext) createTask(command taskapi.CassandraCommand) error {
-	generatedName := fmt.Sprintf("%s-%d", command, time.Now().Unix())
+func (rc *ReconciliationContext) createCleanupTask() error {
+	generatedName := fmt.Sprintf("%s-%d", taskapi.CommandCleanup, time.Now().Unix())
 	dc := rc.Datacenter
+
+	var maxConcurrentPods *int
+	if metav1.HasAnnotation(rc.Datacenter.ObjectMeta, api.EnableParallelCleanupWithinRackAnnotation) {
+		maxConcurrentPods = rc.calculateMaxConcurrentPods()
+	}
 
 	task := &taskapi.CassandraTask{
 		ObjectMeta: metav1.ObjectMeta{
@@ -2446,10 +2452,11 @@ func (rc *ReconciliationContext) createTask(command taskapi.CassandraCommand) er
 			CassandraTaskTemplate: taskapi.CassandraTaskTemplate{
 				Jobs: []taskapi.CassandraJob{
 					{
-						Name:    fmt.Sprintf("%s-%s", command, rc.Datacenter.Name),
-						Command: command,
+						Name:    fmt.Sprintf("%s-%s", taskapi.CommandCleanup, rc.Datacenter.Name),
+						Command: taskapi.CommandCleanup,
 					},
 				},
+				MaxConcurrentPods: maxConcurrentPods,
 			},
 		},
 		Status: taskapi.CassandraTaskStatus{},
@@ -2470,6 +2477,10 @@ func (rc *ReconciliationContext) createTask(command taskapi.CassandraCommand) er
 	rc.Datacenter.Status.AddTaskToTrack(task.ObjectMeta)
 
 	return rc.Client.Status().Patch(rc.Ctx, dc, dcPatch)
+}
+
+func (rc *ReconciliationContext) calculateMaxConcurrentPods() *int {
+	return ptr.To(rc.desiredRackInformation[0].NodeCount)
 }
 
 func (rc *ReconciliationContext) activeTaskCompleted(task *taskapi.CassandraTask) result.ReconcileResult {

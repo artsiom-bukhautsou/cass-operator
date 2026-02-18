@@ -435,14 +435,6 @@ func (r *CassandraTaskReconciler) getDatacenterStatefulSets(ctx context.Context,
 	return sts.Items, nil
 }
 
-func (r *CassandraTaskReconciler) getStatefulSetPods(ctx context.Context, dc *cassapi.CassandraDatacenter, st *appsv1.StatefulSet) ([]corev1.Pod, error) {
-	var pods corev1.PodList
-	if err := r.List(ctx, &pods, client.InNamespace(dc.Namespace), client.MatchingLabels(st.Spec.Selector.MatchLabels)); err != nil {
-		return nil, err
-	}
-	return pods.Items, nil
-}
-
 // reconcileEveryPodTask executes the given task against all the Datacenter pods
 func (r *CassandraTaskReconciler) reconcileEveryPodTask(ctx context.Context, cassTask *api.CassandraTask, dc *cassapi.CassandraDatacenter, taskConfig *TaskConfiguration) (ctrl.Result, int, int, error) {
 	logger := log.FromContext(ctx)

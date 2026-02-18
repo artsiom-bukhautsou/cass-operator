@@ -708,6 +708,10 @@ var _ = Describe("CassandraTask controller tests", func() {
 				mockServer.Start()
 				By("create datacenter", createDatacenter(testDatacenterName, testNamespaceName))
 			})
+			AfterEach(func() {
+				mockServer.Close()
+				deleteDatacenter(testNamespaceName)
+			})
 			It("Runs a ts reload task against a pod", func() {
 				By("Creating a task for tsreload")
 				taskKey, task := buildTask(api.CommandTSReload, testNamespaceName)

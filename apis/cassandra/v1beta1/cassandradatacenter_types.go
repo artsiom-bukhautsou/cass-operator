@@ -81,9 +81,6 @@ const (
 	// DeletePVCAnnotation determines if the operator should delete the PVCs when the CassandraDatacenter is deleted. Default is true, set to false to skip deletion.
 	DeletePVCAnnotation = "cassandra.datastax.com/delete-pvc"
 
-	// EnableParallelCleanupWithinRackAnnotation speeds up post-scale-out cleanup by processing nodes in parallel within a rack.
-	EnableParallelCleanupWithinRackAnnotation = "cassandra.datastax.com/enable-parallel-cleanup-within-rack"
-
 	AllowUpdateAlways AllowUpdateType = "always"
 	AllowUpdateOnce   AllowUpdateType = "once"
 

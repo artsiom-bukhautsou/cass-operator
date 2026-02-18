@@ -2432,11 +2432,7 @@ func (rc *ReconciliationContext) cleanupAfterScaling() result.ReconcileResult {
 func (rc *ReconciliationContext) createCleanupTask() error {
 	generatedName := fmt.Sprintf("%s-%d", taskapi.CommandCleanup, time.Now().Unix())
 	dc := rc.Datacenter
-
-	var maxConcurrentPods *int
-	if metav1.HasAnnotation(rc.Datacenter.ObjectMeta, api.EnableParallelCleanupWithinRackAnnotation) {
-		maxConcurrentPods = rc.calculateMaxConcurrentPods()
-	}
+	maxConcurrentPods := rc.calculateMaxConcurrentPods()
 
 	task := &taskapi.CassandraTask{
 		ObjectMeta: metav1.ObjectMeta{

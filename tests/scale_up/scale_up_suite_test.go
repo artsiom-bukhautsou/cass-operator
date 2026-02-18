@@ -110,30 +110,13 @@ var _ = Describe(testName, func() {
 			// Also verify that we have exactly 3 tasks, no more
 			ns.CheckForCassandraTasks(dcName, "cleanup", false, 3)
 
-			step = "add annotation to enable parallel cleanup within rack"
-			json = "{\"metadata\": {\"annotations\": {\"cassandra.datastax.com/enable-parallel-cleanup-within-rack\": \"true\"}}}"
-			k = kubectl.PatchMerge(dcResource, json)
-			ns.ExecAndLog(step, k)
-			ns.WaitForDatacenterReady(dcName)
-
-			step = "scale up to 6 nodes"
-			json = "{\"spec\": {\"size\": 6}}"
-			k = kubectl.PatchMerge(dcResource, json)
-			ns.ExecAndLog(step, k)
-			ns.WaitForDatacenterReady(dcName)
-
-			step = "checking that cassandratask has expected number of maxConcurrentPods"
-			json = "jsonpath={.items[?(@.spec.maxConcurrentPods)].spec.maxConcurrentPods}"
-			k = kubectl.Get("cassandratask").
-				WithLabel(fmt.Sprintf("cassandra.datastax.com/datacenter=%s", dcName)).
-				FormatOutput(json)
-			ns.WaitForOutputAndLog(step, k, "6", 20)
-			ns.WaitForCompletedCassandraTasks(dcName, "cleanup", 4)
+			expectedMaxConcurrentPods := []int{2, 4, 5}
+			ns.VerifyMaxConcurrentPodsForCleanupTasks(dcName, expectedMaxConcurrentPods)
 
 			step = "check recorded host IDs"
 			ns.Log(step)
 			nodeStatusesHostIds := ns.GetNodeStatusesHostIds(dcName)
-			Expect(nodeStatusesHostIds).To(HaveLen(6))
+			Expect(nodeStatusesHostIds).To(HaveLen(5))
 
 			step = "deleting the dc"
 			k = kubectl.DeleteFromFiles(testFile)

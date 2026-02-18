@@ -709,3 +709,17 @@ func (ns *NsWrapper) ExpectDatacenterNameStatusUpdated(dcName, dcNameOverride st
 
 	ns.WaitForOutputAndLog(step, k, dcNameOverride, 120)
 }
+
+func (ns *NsWrapper) VerifyMaxConcurrentPodsForCleanupTasks(dcName string, expectedSizes []int) {
+	step := "checking that cassandratasks have expected number of maxConcurrentPods"
+	expectedValues := make([]string, len(expectedSizes))
+	for i, size := range expectedSizes {
+		expectedValues[i] = strconv.Itoa(size)
+	}
+	expected := strings.Join(expectedValues, " ")
+	json := "jsonpath={.items[?(@.spec.maxConcurrentPods)].spec.maxConcurrentPods}"
+	k := kubectl.Get("cassandratask").
+		WithLabel(fmt.Sprintf("cassandra.datastax.com/datacenter=%s", dcName)).
+		FormatOutput(json)
+	ns.WaitForOutputAndLog(step, k, expected, 20)
+}

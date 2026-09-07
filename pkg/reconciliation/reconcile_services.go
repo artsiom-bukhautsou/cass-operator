@@ -59,7 +59,31 @@ func (rc *ReconciliationContext) CheckHeadlessServices() result.ReconcileResult 
 
 	// Check if there is a headless service for the cluster
 
-	cqlService := newServiceForCassandraDatacenter(dc)
+	config := dc.Spec.Config
+	if dc.Spec.ConfigSecret != "" {
+		key := types.NamespacedName{Namespace: dc.Namespace, Name: dc.Spec.ConfigSecret}
+		secret, err := rc.retrieveSecret(key)
+		if err != nil {
+			logger.Error(err, "failed to get config secret", "ConfigSecret", key.Name)
+			return result.Error(err)
+		}
+
+		var found bool
+		config, found = secret.Data["config"]
+		if !found {
+			err := fmt.Errorf("invalid config secret %s: config property is required", dc.Spec.ConfigSecret)
+			logger.Error(err, "failed to get json config from secret", "ConfigSecret", dc.Spec.ConfigSecret)
+			return result.Error(err)
+		}
+	}
+
+	configPorts, err := getCassandraConfigPortsForDatacenter(dc, config)
+	if err != nil {
+		logger.Error(err, "failed to parse Cassandra config while constructing datacenter service")
+		return result.Error(err)
+	}
+
+	cqlService := newServiceForCassandraDatacenterWithConfigPorts(dc, configPorts)
 	seedService := newSeedServiceForCassandraDatacenter(dc)
 	allPodsService := newAllPodsServiceForCassandraDatacenter(dc)
 	additionalSeedService := newAdditionalSeedServiceForCassandraDatacenter(dc)

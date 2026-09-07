@@ -780,16 +780,60 @@ func namedPort(name string, port int) corev1.ContainerPort {
 	return corev1.ContainerPort{Name: name, ContainerPort: int32(port)}
 }
 
+// CassandraConfigPorts contains optional ports enabled through cassandra.yaml.
+// A zero value means that the corresponding port is not enabled.
+type CassandraConfigPorts struct {
+	NativeTransportSSL int
+	Thrift             int
+}
+
+// GetCassandraConfigPorts extracts optional ports enabled through cassandra.yaml.
+func GetCassandraConfigPorts(config []byte) (CassandraConfigPorts, error) {
+	cassandraYamlConfig := struct {
+		CassandraYaml struct {
+			NativeTransportPortSSL int  `json:"native_transport_port_ssl"`
+			StartRPC               bool `json:"start_rpc"`
+			RPCPort                int  `json:"rpc_port"`
+		} `json:"cassandra-yaml"`
+	}{}
+	if len(config) > 0 {
+		if err := json.Unmarshal(config, &cassandraYamlConfig); err != nil {
+			return CassandraConfigPorts{}, err
+		}
+	}
+
+	ports := CassandraConfigPorts{
+		NativeTransportSSL: cassandraYamlConfig.CassandraYaml.NativeTransportPortSSL,
+	}
+	if cassandraYamlConfig.CassandraYaml.StartRPC {
+		ports.Thrift = cassandraYamlConfig.CassandraYaml.RPCPort
+		if ports.Thrift == 0 {
+			ports.Thrift = 9160
+		}
+	}
+
+	return ports, nil
+}
+
 // GetContainerPorts will return the container ports for the pods in a statefulset based on the provided config
 func (dc *CassandraDatacenter) GetContainerPorts() ([]corev1.ContainerPort, error) {
+	return dc.GetContainerPortsWithConfig(dc.Spec.Config)
+}
+
+// GetContainerPortsWithConfig will return the container ports for the pods in a statefulset based on the provided
+// effective config. This allows callers to provide config loaded from ConfigSecret.
+func (dc *CassandraDatacenter) GetContainerPortsWithConfig(config []byte) ([]corev1.ContainerPort, error) {
 	nativePort := DefaultNativePort
 	internodePort := DefaultInternodePort
+	configPorts, err := GetCassandraConfigPorts(config)
+	if err != nil {
+		return nil, err
+	}
 
 	// Note: Port Names cannot be more than 15 characters
 
 	ports := []corev1.ContainerPort{
 		namedPort("native", nativePort),
-		namedPort("tls-native", 9142),
 		namedPort("internode", internodePort),
 		namedPort("tls-internode", 7001),
 		namedPort("jmx", 7199),
@@ -798,9 +842,12 @@ func (dc *CassandraDatacenter) GetContainerPorts() ([]corev1.ContainerPort, erro
 		namedPort("metrics", 9000),
 	}
 
-	if strings.HasPrefix(dc.Spec.ServerVersion, "3.") || dc.Spec.ServerType == "dse" {
-		ports = append(ports,
-			namedPort("thrift", 9160))
+	if configPorts.NativeTransportSSL != 0 {
+		ports = append(ports, namedPort("tls-native", configPorts.NativeTransportSSL))
+	}
+
+	if configPorts.Thrift != 0 {
+		ports = append(ports, namedPort("thrift", configPorts.Thrift))
 	}
 
 	if dc.Spec.ServerType == "dse" {

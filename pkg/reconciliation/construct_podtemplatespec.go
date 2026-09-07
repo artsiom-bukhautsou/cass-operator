@@ -671,6 +671,15 @@ func securityContext(dc *api.CassandraDatacenter, container *corev1.Container) {
 // If values are provided in the matching containers in the
 // PodTemplateSpec field of the dc, they will override defaults.
 func buildContainers(dc *api.CassandraDatacenter, baseTemplate *corev1.PodTemplateSpec, imageRegistry images.ImageRegistry) error {
+	return buildContainersWithConfig(dc, baseTemplate, imageRegistry, dc.Spec.Config)
+}
+
+func buildContainersWithConfig(
+	dc *api.CassandraDatacenter,
+	baseTemplate *corev1.PodTemplateSpec,
+	imageRegistry images.ImageRegistry,
+	config []byte,
+) error {
 	// Create new Container structs or get references to existing ones
 
 	cassContainer := &corev1.Container{}
@@ -769,7 +778,7 @@ func buildContainers(dc *api.CassandraDatacenter, baseTemplate *corev1.PodTempla
 
 	// Combine ports
 
-	portDefaults, err := dc.GetContainerPorts()
+	portDefaults, err := dc.GetContainerPortsWithConfig(config)
 	if err != nil {
 		return err
 	}
@@ -916,6 +925,16 @@ func buildContainers(dc *api.CassandraDatacenter, baseTemplate *corev1.PodTempla
 }
 
 func buildPodTemplateSpec(dc *api.CassandraDatacenter, rack api.Rack, addLegacyInternodeMount bool, imageRegistry images.ImageRegistry) (*corev1.PodTemplateSpec, error) {
+	return buildPodTemplateSpecWithConfig(dc, rack, addLegacyInternodeMount, imageRegistry, dc.Spec.Config)
+}
+
+func buildPodTemplateSpecWithConfig(
+	dc *api.CassandraDatacenter,
+	rack api.Rack,
+	addLegacyInternodeMount bool,
+	imageRegistry images.ImageRegistry,
+	config []byte,
+) (*corev1.PodTemplateSpec, error) {
 	// Create a podTemplateSpec for the rack.
 	baseTemplate := dc.Spec.PodTemplateSpec.DeepCopy()
 
@@ -992,7 +1011,7 @@ func buildPodTemplateSpec(dc *api.CassandraDatacenter, rack api.Rack, addLegacyI
 	}
 
 	// Containers
-	if err := buildContainers(dc, baseTemplate, imageRegistry); err != nil {
+	if err := buildContainersWithConfig(dc, baseTemplate, imageRegistry, config); err != nil {
 		return nil, err
 	}
 

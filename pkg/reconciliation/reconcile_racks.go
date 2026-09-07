@@ -447,7 +447,13 @@ func (rc *ReconciliationContext) CheckRackPodTemplateDetails(force bool, failedR
 			return result.RequeueSoon(10)
 		}
 
-		desiredSts, err := newStatefulSetForCassandraDatacenter(statefulSet, rackName, dc, int(*statefulSet.Spec.Replicas), rc.ImageRegistry)
+		desiredSts, err := newStatefulSetForCassandraDatacenterWithConfig(
+			statefulSet,
+			rackName,
+			dc,
+			int(*statefulSet.Spec.Replicas),
+			rc.ImageRegistry,
+			rc.cassandraConfig)
 		if err != nil {
 			logger.Error(err, "error calling newStatefulSetForCassandraDatacenter")
 			return result.Error(err)
@@ -1568,12 +1574,13 @@ func (rc *ReconciliationContext) GetStatefulSetForRack(
 		return nil, false, err
 	}
 
-	desiredStatefulSet, err := newStatefulSetForCassandraDatacenter(
+	desiredStatefulSet, err := newStatefulSetForCassandraDatacenterWithConfig(
 		currentStatefulSet,
 		nextRack.RackName,
 		rc.Datacenter,
 		nextRack.NodeCount,
-		rc.ImageRegistry)
+		rc.ImageRegistry,
+		rc.cassandraConfig)
 	if err != nil {
 		return nil, false, err
 	}

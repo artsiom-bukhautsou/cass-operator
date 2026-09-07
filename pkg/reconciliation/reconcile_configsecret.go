@@ -28,6 +28,11 @@ func (rc *ReconciliationContext) CheckConfigSecret() result.ReconcileResult {
 	rc.ReqLogger.Info("reconcile_racks::CheckConfigSecret")
 
 	if len(rc.Datacenter.Spec.ConfigSecret) == 0 {
+		config, err := serverconfig.GetConfigAsJSON(rc.Datacenter, rc.Datacenter.Spec.Config)
+		if err != nil {
+			return result.Error(err)
+		}
+		rc.cassandraConfig = []byte(config)
 		return result.Continue()
 	}
 
@@ -47,6 +52,7 @@ func (rc *ReconciliationContext) CheckConfigSecret() result.ReconcileResult {
 		rc.ReqLogger.Error(err, "failed to get json config from secret", "ConfigSecret", rc.Datacenter.Spec.ConfigSecret)
 		return result.Error(err)
 	}
+	rc.cassandraConfig = config
 
 	secretName := getDatacenterConfigSecretName(rc.Datacenter)
 	dcConfigSecret, exists, err := rc.getDatacenterConfigSecret(secretName)

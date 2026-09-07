@@ -69,6 +69,17 @@ func newStatefulSetForCassandraDatacenter(
 	replicaCount int,
 	imageRegistry images.ImageRegistry,
 ) (*appsv1.StatefulSet, error) {
+	return newStatefulSetForCassandraDatacenterWithConfig(sts, rackName, dc, replicaCount, imageRegistry, dc.Spec.Config)
+}
+
+func newStatefulSetForCassandraDatacenterWithConfig(
+	sts *appsv1.StatefulSet,
+	rackName string,
+	dc *api.CassandraDatacenter,
+	replicaCount int,
+	imageRegistry images.ImageRegistry,
+	config []byte,
+) (*appsv1.StatefulSet, error) {
 	replicaCountInt32 := int32(replicaCount)
 
 	// see https://github.com/kubernetes/kubernetes/pull/74941
@@ -120,7 +131,7 @@ func newStatefulSetForCassandraDatacenter(
 
 	nsName := NewNamespacedNameForStatefulSet(dc, rackName)
 
-	template, err := buildPodTemplateSpec(dc, rack, legacyInternodeMount(dc, sts), imageRegistry)
+	template, err := buildPodTemplateSpecWithConfig(dc, rack, legacyInternodeMount(dc, sts), imageRegistry, config)
 	if err != nil {
 		return nil, err
 	}

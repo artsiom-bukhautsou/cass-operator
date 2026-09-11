@@ -11,6 +11,8 @@ Changelog for Cass Operator, new PRs should update the `main / unreleased` secti
 
 ## unreleased
 
+* [ENHANCEMENT] [#959](https://github.com/k8ssandra/cass-operator/issues/959) Expose prometheus port and PromMetricsLabel only when MCAC is enabled, sync service ports from PodTemplateSpec container port overrides, and reflect NodePort-configured port numbers in container ports.
+
 ## v1.32.0
 
 * [ENHANCEMENT] [#943](https://github.com/k8ssandra/cass-operator/issues/943) Add terminating state as one of the Pod status metrics

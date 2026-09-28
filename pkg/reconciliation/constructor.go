@@ -106,6 +106,14 @@ func setDatacenterStatus(rc *ReconciliationContext) error {
 			return err
 		}
 	}
+	if rc.legacyEndpointsCleanupCompleted {
+		patch := client.MergeFrom(rc.Datacenter.DeepCopy())
+		rc.Datacenter.Status.MetadataVersion = 2
+		if err := rc.Client.Status().Patch(rc.Ctx, rc.Datacenter, patch); err != nil {
+			rc.ReqLogger.Error(err, "error updating metadata version after legacy endpoints cleanup")
+			return err
+		}
+	}
 
 	if err := rc.setConditionStatus(api.DatacenterRequiresUpdate, corev1.ConditionFalse); err != nil {
 		return err

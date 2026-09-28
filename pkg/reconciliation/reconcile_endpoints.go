@@ -49,6 +49,11 @@ func (rc *ReconciliationContext) CheckAdditionalSeedEndpointSlices() result.Reco
 }
 
 func (rc *ReconciliationContext) removeLegacyEndpoints(ctx context.Context, cli client.Client) error {
+	areLegacyEndpointsAlreadyRemoved := rc.Datacenter.Status.MetadataVersion > 1
+	if areLegacyEndpointsAlreadyRemoved {
+		return nil
+	}
+
 	endpoints := &corev1.EndpointsList{}
 	labels := rc.Datacenter.GetDatacenterLabels()
 	labels[oplabels.ManagedByLabel] = oplabels.ManagedByLabelValue
@@ -69,6 +74,7 @@ func (rc *ReconciliationContext) removeLegacyEndpoints(ctx context.Context, cli 
 			return err
 		}
 	}
+	rc.legacyEndpointsCleanupCompleted = true
 
 	return nil
 }

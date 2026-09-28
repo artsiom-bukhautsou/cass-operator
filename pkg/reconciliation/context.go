@@ -27,16 +27,17 @@ import (
 
 // ReconciliationContext contains all of the input necessary to calculate a list of ReconciliationActions
 type ReconciliationContext struct {
-	Request          *reconcile.Request
-	Client           client.Client
-	Scheme           *runtime.Scheme
-	Datacenter       *api.CassandraDatacenter
-	NodeMgmtClient   httphelper.NodeMgmtClient
-	Recorder         *events.LoggingEventRecorder
-	ReqLogger        logr.Logger
-	SecretWatches    dynamicwatch.DynamicWatches
-	ImageRegistry    images.ImageRegistry
-	ClusterResources bool
+	Request                         *reconcile.Request
+	Client                          client.Client
+	Scheme                          *runtime.Scheme
+	Datacenter                      *api.CassandraDatacenter
+	NodeMgmtClient                  httphelper.NodeMgmtClient
+	Recorder                        *events.LoggingEventRecorder
+	ReqLogger                       logr.Logger
+	SecretWatches                   dynamicwatch.DynamicWatches
+	ImageRegistry                   images.ImageRegistry
+	ClusterResources                bool
+	legacyEndpointsCleanupCompleted bool
 
 	// According to golang recommendations the context should not be stored in a struct but given that
 	// this is passed around as a parameter we feel that its a fair compromise. For further discussion
